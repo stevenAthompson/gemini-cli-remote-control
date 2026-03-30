@@ -165,24 +165,29 @@ export class RemoteControlService {
             try {
               const data = JSON.parse(body) as unknown;
               if (isInputBody(data)) {
-                // Normalize \n → \r (raw terminal Enter signal), then split
-                // so text and \r are emitted in separate event-loop ticks.
-                // This avoids bufferFastReturn() converting an immediately
-                // following \r into shift+enter (which does not submit).
-                const normalized = data.input.replace(/\n/g, '\r');
-                const parts = normalized.split('\r');
+                // Emit input text then always submit at the end.
+                // Segments are 50ms apart to stay outside bufferFastReturn's
+                // 30ms window (otherwise \r becomes shift+enter, not submit).
+                // \n in the body becomes a line-break within the text via
+                // the backslash+enter mechanism (\ + \r → shift+enter).
+                const segments = data.input.split('\n');
                 let delay = 0;
-                for (let i = 0; i < parts.length; i++) {
-                  if (parts[i]) {
-                    const text = parts[i];
+                for (let i = 0; i < segments.length; i++) {
+                  if (segments[i]) {
+                    const text = segments[i];
                     setTimeout(() => process.stdin.emit('data', text), delay);
-                    delay += 50; // > FAST_RETURN_TIMEOUT (30 ms)
+                    delay += 50;
                   }
-                  if (i < parts.length - 1) {
+                  if (i < segments.length - 1) {
+                    // Insert newline in text: \ + enter → shift+enter
+                    setTimeout(() => process.stdin.emit('data', '\\'), delay);
+                    delay += 50;
                     setTimeout(() => process.stdin.emit('data', '\r'), delay);
                     delay += 50;
                   }
                 }
+                // Always submit at the end
+                setTimeout(() => process.stdin.emit('data', '\r'), delay);
                 res.writeHead(200, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify({ success: true }));
                 return;

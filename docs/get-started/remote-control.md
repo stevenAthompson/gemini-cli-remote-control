@@ -117,20 +117,25 @@ useful for automating commands from external tools.
 **Examples**
 
 ```bash
-# Send a prompt — \n is automatically converted to Enter
+# Send a prompt — automatically submitted at the end
 curl -s -X POST http://127.0.0.1:25418/input \
   -H 'Content-Type: application/json' \
-  -d '{"input": "Summarize the last git commit\n"}'
+  -d '{"input": "Summarize the last git commit"}'
 
 # Run a slash command
 curl -s -X POST http://127.0.0.1:25418/input \
   -H 'Content-Type: application/json' \
-  -d '{"input": "/help\n"}'
+  -d '{"input": "/help"}'
+
+# Multi-line input (\n inserts a line-break within the text)
+curl -s -X POST http://127.0.0.1:25418/input \
+  -H 'Content-Type: application/json' \
+  -d '{"input": "Line one\nLine two"}'
 ```
 
-_Note: `\n` in the input string is automatically converted to a carriage return
-(`\r`), which is the signal terminals use for Enter. You do not need to use `\r`
-directly._
+_Note: Input is always submitted automatically — no need to append `\n` or `\r`.
+A `\n` within the string inserts a line break inside the text (equivalent to
+pressing `\` + Enter in the terminal)._
 
 **Response (JSON)**
 
