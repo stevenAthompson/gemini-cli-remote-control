@@ -165,8 +165,24 @@ export class RemoteControlService {
             try {
               const data = JSON.parse(body) as unknown;
               if (isInputBody(data)) {
-                // Emit the input data to stdin so the CLI processes it as if it were typed.
-                process.stdin.emit('data', data.input);
+                // Normalize \n → \r (raw terminal Enter signal), then split
+                // so text and \r are emitted in separate event-loop ticks.
+                // This avoids bufferFastReturn() converting an immediately
+                // following \r into shift+enter (which does not submit).
+                const normalized = data.input.replace(/\n/g, '\r');
+                const parts = normalized.split('\r');
+                let delay = 0;
+                for (let i = 0; i < parts.length; i++) {
+                  if (parts[i]) {
+                    const text = parts[i];
+                    setTimeout(() => process.stdin.emit('data', text), delay);
+                    delay += 50; // > FAST_RETURN_TIMEOUT (30 ms)
+                  }
+                  if (i < parts.length - 1) {
+                    setTimeout(() => process.stdin.emit('data', '\r'), delay);
+                    delay += 50;
+                  }
+                }
                 res.writeHead(200, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify({ success: true }));
                 return;

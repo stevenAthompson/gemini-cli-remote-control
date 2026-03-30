@@ -117,19 +117,20 @@ useful for automating commands from external tools.
 **Examples**
 
 ```bash
-# Send a prompt and submit it immediately (note the \r)
+# Send a prompt — \n is automatically converted to Enter
 curl -s -X POST http://127.0.0.1:25418/input \
   -H 'Content-Type: application/json' \
-  -d '{"input": "Summarize the last git commit\r"}'
+  -d '{"input": "Summarize the last git commit\n"}'
 
 # Run a slash command
 curl -s -X POST http://127.0.0.1:25418/input \
   -H 'Content-Type: application/json' \
-  -d '{"input": "/help\r"}'
+  -d '{"input": "/help\n"}'
 ```
 
-_Note: Make sure to include carriage returns (`\r`) or newlines if you want to
-submit the input immediately._
+_Note: `\n` in the input string is automatically converted to a carriage return
+(`\r`), which is the signal terminals use for Enter. You do not need to use `\r`
+directly._
 
 **Response (JSON)**
 
