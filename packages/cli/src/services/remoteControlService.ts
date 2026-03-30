@@ -32,6 +32,7 @@ export class RemoteControlService {
   private static instance: RemoteControlService | undefined;
   private server: http.Server | null = null;
   private currentUIState: UIState | null = null;
+  private inkLastFrame: (() => string | undefined) | null = null;
 
   private constructor() {}
 
@@ -48,6 +49,13 @@ export class RemoteControlService {
    */
   updateUIState(state: UIState) {
     this.currentUIState = state;
+  }
+
+  /**
+   * Registers the Ink instance's lastFrame function for screen capture.
+   */
+  setLastFrameFn(fn: () => string | undefined) {
+    this.inkLastFrame = fn;
   }
 
   /**
@@ -145,9 +153,7 @@ export class RemoteControlService {
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify(responseHistory, null, 2));
         } else if (req.method === 'GET' && req.url === '/screen') {
-          // Screen capture not directly supported without intercepting stdout stream.
-          const frame =
-            'Screen capture not directly supported in this version.';
+          const frame = this.inkLastFrame?.() ?? '';
           res.writeHead(200, { 'Content-Type': 'text/plain' });
           res.end(frame);
         } else if (req.method === 'POST' && req.url === '/input') {

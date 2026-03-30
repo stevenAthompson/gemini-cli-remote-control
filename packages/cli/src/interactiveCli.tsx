@@ -103,6 +103,28 @@ export async function startInteractiveUI(
 
   const { stdout: inkStdout, stderr: inkStderr } = createWorkingStdio();
 
+  // Intercept _write (the non-overloaded internal Writable method) to capture
+  // the most recent terminal frame for the remote control /screen endpoint.
+  if (settings.merged.remoteControl?.enabled) {
+    let lastFrame = '';
+    const origWrite = inkStdout._write.bind(inkStdout);
+    inkStdout._write = (
+      chunk: unknown,
+      encoding: BufferEncoding,
+      callback: (error?: Error | null) => void,
+    ): void => {
+      const text =
+        chunk instanceof Buffer
+          ? chunk.toString('utf8')
+          : typeof chunk === 'string'
+            ? chunk
+            : '';
+      if (text) lastFrame = text;
+      origWrite(chunk, encoding, callback);
+    };
+    RemoteControlService.getInstance().setLastFrameFn(() => lastFrame);
+  }
+
   const isShpool = !!process.env['SHPOOL_SESSION_NAME'];
 
   // Create wrapper component to use hooks inside render
