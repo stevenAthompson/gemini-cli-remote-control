@@ -27,6 +27,12 @@ accessible locally.
 
 Returns the current state of the CLI.
 
+**Example**
+
+```bash
+curl -s http://127.0.0.1:25418/status
+```
+
 **Response (JSON)**
 
 ```json
@@ -57,6 +63,12 @@ Returns a placeholder string indicating that screen capture is not fully
 supported in this version. _Note: Direct screen buffer capture via Ink is
 unsupported without stream interception._
 
+**Example**
+
+```bash
+curl -s http://127.0.0.1:25418/screen
+```
+
 ### 3. `GET /history?lines=<number|ALL>`
 
 Returns the chat session history.
@@ -65,6 +77,22 @@ Returns the chat session history.
 - **Custom limit:** `GET /history?lines=50` returns the last 50 items.
 - **Full history:** `GET /history?lines=ALL` returns the complete session
   history.
+
+**Examples**
+
+```bash
+# Last 100 items (default)
+curl -s http://127.0.0.1:25418/history
+
+# Last 10 items
+curl -s http://127.0.0.1:25418/history?lines=10
+
+# Full session history
+curl -s 'http://127.0.0.1:25418/history?lines=ALL'
+
+# Pretty-print with jq
+curl -s http://127.0.0.1:25418/history | jq '.[].text'
+```
 
 **Response (JSON Array)**
 
@@ -86,12 +114,18 @@ Returns the chat session history.
 Injects text into the CLI as if the user typed it and pressed Enter. This is
 useful for automating commands from external tools.
 
-**Request (JSON)**
+**Examples**
 
-```json
-{
-  "input": "Summarize the last commit\r"
-}
+```bash
+# Send a prompt and submit it immediately (note the \r)
+curl -s -X POST http://127.0.0.1:25418/input \
+  -H 'Content-Type: application/json' \
+  -d '{"input": "Summarize the last git commit\r"}'
+
+# Run a slash command
+curl -s -X POST http://127.0.0.1:25418/input \
+  -H 'Content-Type: application/json' \
+  -d '{"input": "/help\r"}'
 ```
 
 _Note: Make sure to include carriage returns (`\r`) or newlines if you want to
