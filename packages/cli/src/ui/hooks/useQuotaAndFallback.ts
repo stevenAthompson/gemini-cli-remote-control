@@ -66,6 +66,7 @@ export function useQuotaAndFallback({
     useState<EmptyWalletDialogRequest | null>(null);
   const isDialogPending = useRef(false);
   const isValidationPending = useRef(false);
+  const highDemandRetryCount = useRef(0);
 
   // Set up Flash fallback handler
   useEffect(() => {
@@ -149,10 +150,13 @@ export function useQuotaAndFallback({
           message = messageLines.join('\n');
         }
       } else {
+        highDemandRetryCount.current++;
+        const attempt = highDemandRetryCount.current;
         const messageLines = [
           `We are currently experiencing high demand.`,
-          'We apologize and appreciate your patience.',
-          '/model to switch models.',
+          `We apologize and appreciate your patience.`,
+          `Waiting 60 seconds and automatically retrying... (attempt ${attempt})`,
+          `/model to switch models.`,
         ];
         message = messageLines.join('\n');
       }
@@ -164,6 +168,16 @@ export function useQuotaAndFallback({
         !isTerminalQuotaError &&
         !isModelNotFoundError
       ) {
+        return 'retry_once';
+      }
+
+      // If it's a high demand error, auto-retry after 60s instead of blocking on a dialog
+      if (!isTerminalQuotaError && !isModelNotFoundError) {
+        historyManager.addItem({
+          type: 'warning',
+          text: message,
+        });
+        await new Promise((resolve) => setTimeout(resolve, 60000));
         return 'retry_once';
       }
 

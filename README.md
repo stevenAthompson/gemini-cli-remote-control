@@ -1,3 +1,21 @@
+# Gemini CLI — Remote Control Fork
+
+> **This is a custom fork of
+> [google-gemini/gemini-cli](https://github.com/google-gemini/gemini-cli) with
+> the following additions:**
+>
+> - **Remote Control HTTP API** — An optional local REST server
+>   (`127.0.0.1:25418` by default) that lets external scripts and agents monitor
+>   and drive the CLI. Endpoints: `GET /status`, `GET /history`, `GET /screen`,
+>   `POST /input`. Enable via `settings.json`:
+>   `{"remoteControl": {"enabled": true}}`. See
+>   [`docs/get-started/remote-control.md`](./docs/get-started/remote-control.md).
+> - **Automatic retry on high demand** — Instead of prompting "Keep trying" when
+>   the API returns a capacity error, the CLI automatically waits 60 seconds and
+>   retries indefinitely, showing the attempt count in the chat history.
+
+---
+
 # Gemini CLI
 
 [![Gemini CLI CI](https://github.com/google-gemini/gemini-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/google-gemini/gemini-cli/actions/workflows/ci.yml)

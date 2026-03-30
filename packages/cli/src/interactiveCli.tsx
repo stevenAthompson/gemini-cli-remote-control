@@ -46,6 +46,7 @@ import { TerminalProvider } from './ui/contexts/TerminalContext.js';
 import { isAlternateBufferEnabled } from './ui/hooks/useAlternateBuffer.js';
 import { OverflowProvider } from './ui/contexts/OverflowContext.js';
 import { profiler } from './ui/components/DebugProfiler.js';
+import { RemoteControlService } from './services/remoteControlService.js';
 
 const SLOW_RENDER_MS = 200;
 
@@ -71,6 +72,16 @@ export async function startInteractiveUI(
     registerCleanup(() => {
       disableMouseEvents();
     });
+  }
+
+  if (settings.merged.remoteControl?.enabled) {
+    const port = settings.merged.remoteControl.port || 25418;
+    RemoteControlService.getInstance()
+      .start(port)
+      .catch((err) => {
+        debugLogger.error('Failed to start RemoteControlService:', err);
+      });
+    registerCleanup(() => RemoteControlService.getInstance().stop());
   }
 
   const { matchers, errors } = await loadKeyMatchers();

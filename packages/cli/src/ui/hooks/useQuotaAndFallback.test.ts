@@ -421,6 +421,8 @@ describe('useQuotaAndFallback', () => {
 
       for (const { description, error } of testCases) {
         it(`should handle ${description} correctly`, async () => {
+          vi.useFakeTimers();
+
           const { result } = await renderHook(() =>
             useQuotaAndFallback({
               config: mockConfig,
@@ -442,39 +444,31 @@ describe('useQuotaAndFallback', () => {
             promise = handler('model-A', 'model-B', error);
           });
 
-          // The hook should now have a pending request for the UI to handle
-          const request = result.current.proQuotaRequest;
-          expect(request).not.toBeNull();
-          expect(request?.failedModel).toBe('model-A');
-          expect(request?.isTerminalQuotaError).toBe(false);
-
-          // Check that the correct initial message was generated
-          expect(mockHistoryManager.addItem).not.toHaveBeenCalled();
-          const message = request!.message;
-          expect(message).toContain(
-            'We are currently experiencing high demand.',
-          );
-
-          // Simulate the user choosing to continue with the fallback model
-          act(() => {
-            result.current.handleProQuotaChoice('retry_always');
-          });
-
-          expect(mockSetModelSwitchedFromQuotaError).toHaveBeenCalledWith(true);
-          // The original promise from the handler should now resolve
-          const intent = await promise!;
-          expect(intent).toBe('retry_always');
-
-          // The pending request should be cleared from the state
-          expect(result.current.proQuotaRequest).toBeNull();
-          expect(mockConfig.setQuotaErrorOccurred).toHaveBeenCalledWith(true);
-
-          // Check for the "Switched to fallback model" message
+          // It should add a history item immediately
           expect(mockHistoryManager.addItem).toHaveBeenCalledTimes(1);
           const lastCall = (mockHistoryManager.addItem as Mock).mock
             .calls[0][0];
-          expect(lastCall.type).toBe(MessageType.INFO);
-          expect(lastCall.text).toContain('Switched to fallback model model-B');
+          expect(lastCall.type).toBe('warning');
+          expect(lastCall.text).toContain(
+            'We are currently experiencing high demand.',
+          );
+          expect(lastCall.text).toContain(
+            'Waiting 60 seconds and automatically retrying... (attempt 1)',
+          );
+
+          // Fast forward 60 seconds
+          await act(async () => {
+            vi.advanceTimersByTime(60000);
+          });
+
+          const intent = await promise!;
+          expect(intent).toBe('retry_once');
+
+          // There shouldn't be a proQuotaRequest dialog opened
+          const request = result.current.proQuotaRequest;
+          expect(request).toBeNull();
+
+          vi.useRealTimers();
         });
       }
 
@@ -906,8 +900,10 @@ Your admin might have disabled the access. Contact them to enable the Preview Re
       );
     });
 
-    it('should show a special message when falling back from the preview model', async () => {
-      const { result } = await renderHook(() =>
+    it('should auto-retry when falling back from the preview model on high demand', async () => {
+      vi.useFakeTimers();
+
+      await renderHook(() =>
         useQuotaAndFallback({
           config: mockConfig,
           historyManager: mockHistoryManager,
@@ -930,22 +926,28 @@ Your admin might have disabled the access. Contact them to enable the Preview Re
         );
       });
 
-      act(() => {
-        result.current.handleProQuotaChoice('retry_always');
+      await act(async () => {
+        vi.advanceTimersByTime(60000);
       });
 
-      await promise!;
+      const intent = await promise!;
+      expect(intent).toBe('retry_once');
 
       expect(mockHistoryManager.addItem).toHaveBeenCalledTimes(1);
       const lastCall = (mockHistoryManager.addItem as Mock).mock.calls[0][0];
-      expect(lastCall.type).toBe(MessageType.INFO);
+      expect(lastCall.type).toBe('warning');
       expect(lastCall.text).toContain(
-        `Switched to fallback model gemini-2.5-pro`,
+        `We are currently experiencing high demand.`,
       );
+      expect(lastCall.text).toContain(`(attempt 1)`);
+
+      vi.useRealTimers();
     });
 
-    it('should show a special message when falling back from the preview model, but do not show periodical check message for flash model fallback', async () => {
-      const { result } = await renderHook(() =>
+    it('should auto-retry when falling back from the preview model to flash on high demand', async () => {
+      vi.useFakeTimers();
+
+      await renderHook(() =>
         useQuotaAndFallback({
           config: mockConfig,
           historyManager: mockHistoryManager,
@@ -968,18 +970,22 @@ Your admin might have disabled the access. Contact them to enable the Preview Re
         );
       });
 
-      act(() => {
-        result.current.handleProQuotaChoice('retry_always');
+      await act(async () => {
+        vi.advanceTimersByTime(60000);
       });
 
-      await promise!;
+      const intent = await promise!;
+      expect(intent).toBe('retry_once');
 
       expect(mockHistoryManager.addItem).toHaveBeenCalledTimes(1);
       const lastCall = (mockHistoryManager.addItem as Mock).mock.calls[0][0];
-      expect(lastCall.type).toBe(MessageType.INFO);
+      expect(lastCall.type).toBe('warning');
       expect(lastCall.text).toContain(
-        `Switched to fallback model gemini-2.5-flash`,
+        `We are currently experiencing high demand.`,
       );
+      expect(lastCall.text).toContain(`(attempt 1)`);
+
+      vi.useRealTimers();
     });
   });
 

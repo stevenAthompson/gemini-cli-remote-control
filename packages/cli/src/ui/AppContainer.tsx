@@ -172,6 +172,7 @@ import {
   isToolAwaitingConfirmation,
   getAllToolCalls,
 } from './utils/historyUtils.js';
+import { RemoteControlService } from '../services/remoteControlService.js';
 
 interface AppContainerProps {
   config: Config;
@@ -2459,6 +2460,12 @@ Logging in with Google... Restarting Gemini CLI to continue.
       showIsExpandableHint,
     ],
   );
+
+  useEffect(() => {
+    if (settings.merged.remoteControl?.enabled) {
+      RemoteControlService.getInstance().updateUIState(uiState);
+    }
+  }, [uiState, settings.merged.remoteControl?.enabled]);
 
   const exitPrivacyNotice = useCallback(
     () => setShowPrivacyNotice(false),

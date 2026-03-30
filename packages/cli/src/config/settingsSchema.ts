@@ -2485,6 +2485,36 @@ const SETTINGS_SCHEMA = {
     },
   },
 
+  remoteControl: {
+    type: 'object',
+    label: 'Remote Control',
+    category: 'Advanced',
+    requiresRestart: true,
+    default: {},
+    description: 'Settings for remote control of the CLI.',
+    showInDialog: false,
+    properties: {
+      enabled: {
+        type: 'boolean',
+        label: 'Enable Remote Control',
+        category: 'Advanced',
+        requiresRestart: true,
+        default: false,
+        description: 'Enable the RESTful remote control server.',
+        showInDialog: true,
+      },
+      port: {
+        type: 'number',
+        label: 'Remote Control Port',
+        category: 'Advanced',
+        requiresRestart: true,
+        default: 25418,
+        description: 'The port for the remote control server.',
+        showInDialog: true,
+      },
+    },
+  },
+
   admin: {
     type: 'object',
     label: 'Admin',

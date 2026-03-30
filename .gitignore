@@ -64,3 +64,10 @@ gemini-debug.log
 evals/logs/
 
 temp_agents/
+
+# AI agent working files
+PLAN.md
+TODO.md
+Overview.md
+project_memory.db
+test_remote_control.cjs
